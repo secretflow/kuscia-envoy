@@ -1,0 +1,35 @@
+// Copyright 2023 Ant Group Co., Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package envoy.extensions.filters.http.kuscia_header_decorator.v3;
+option go_package = "gitlab.alipay-inc.com/secretflow/kuscia-envoy/kuscia/api/filters/http/kuscia_header_decorator/v3";
+
+message HeaderDecorator {
+    message HeaderEntry {
+        string key = 1;
+        string value = 2;
+    }
+    message SourceHeader {
+        string source = 1;
+        repeated HeaderEntry headers = 2;
+    }
+    
+    // as a reverse proxy, header decorator filter append specified entries to the request headers.
+    // for example, you can assign a token for each source, and the upstream cluster use the token to
+    // authorize requests
+    repeated SourceHeader append_headers = 1;
+}

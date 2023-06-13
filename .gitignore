@@ -1,0 +1,4 @@
+bazel-*
+.bazel-cache
+.idea
+.vscode
