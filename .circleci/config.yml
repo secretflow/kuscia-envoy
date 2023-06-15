@@ -17,7 +17,7 @@ jobs:
           command: |
             git submodule update --init
             git config --global --add safe.directory ./
-            bazel build //:envoy --verbose_failures
+            bazel build //:envoy -c opt --ui_event_filters=-info,-debug,-warning
             mkdir -p build_apps
             mv bazel-bin/envoy build_apps
       - store_artifacts:
