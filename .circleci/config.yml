@@ -13,15 +13,15 @@ jobs:
     steps:
       - checkout
       - run:
-        name: Build envoy
-        command: |
-          git submodule update --init
-          git config --global --add safe.directory ./
-          bazel build //:envoy --verbose_failures
-          mkdir -p build_apps
-          mv bazel-bin/envoy build_apps
+          name: Build envoy
+          command: |
+            git submodule update --init
+            git config --global --add safe.directory ./
+            bazel build //:envoy --verbose_failures
+            mkdir -p build_apps
+            mv bazel-bin/envoy build_apps
       - store_artifacts:
-        path: build_apps
+          path: build_apps
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
