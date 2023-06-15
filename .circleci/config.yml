@@ -5,22 +5,27 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/configuration-reference/#executor-job
+  build-envoy:
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/configuration-reference/#steps
+      - image: secretflow/ubuntu-base-ci:latest
+    resource_class: large
+    shell: /bin/bash --login -eo pipefail
     steps:
       - checkout
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+        name: Build envoy
+        command: |
+          git submodule update --init
+          git config --global --add safe.directory ./
+          bazel build //:envoy --verbose_failures
+          mkdir -p build_apps
+          mv bazel-bin/envoy build_apps
+      - store_artifacts:
+        path: build_apps
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
-  say-hello-workflow:
+  build-workflow:
     jobs:
-      - say-hello
+      - build-envoy
