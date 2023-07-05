@@ -3,3 +3,7 @@ import %workspace%/envoy/.bazelrc
 build --platform_mappings=envoy/bazel/platform_mappings
 
 build:linux --copt=-Wno-uninitialized
+
+build --action_env=GOPROXY=https://goproxy.cn,direct
+test --action_env=GOPROXY=https://goproxy.cn,direct
+run --action_env=GOPROXY=https://goproxy.cn,direc

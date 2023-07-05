@@ -14,10 +14,16 @@ Kuscia Envoy 基于开源[Envoy](https://github.com/envoyproxy/envoy)实现了�
 - kuscia_header_decorator: 在将请求转发到上游服务之前添加指定的 header。
 比如你可以根据请求来源，在请求头中添加对应的 token ，上游服务可以使用 token 对请求进行鉴权。
 
-## 构建
+## 构建可执行文件
 
 ```shell
 make build-envoy
+```
+
+## 构建镜像
+
+```shell
+make image
 ```
 
 ## 测试

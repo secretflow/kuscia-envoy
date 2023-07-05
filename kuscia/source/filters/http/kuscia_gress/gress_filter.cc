@@ -1,11 +1,11 @@
 // Copyright 2023 Ant Group Co., Ltd.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //   http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,6 +38,39 @@ static void adjustContentLength(Http::RequestOrResponseHeaderMap& headers, uint6
     }
 }
 
+static std::string replaceNamespaceInHost(absl::string_view host, absl::string_view new_namespace) {
+    std::vector<absl::string_view> fields = absl::StrSplit(host, ".");
+    for (std::size_t i = 2; i < fields.size(); i++) {
+        if (fields[i] == "svc") {
+            fields[i - 1] = new_namespace;
+            return absl::StrJoin(fields, ".");
+        }
+    }
+    return "";
+}
+
+RewriteHostConfig::RewriteHostConfig(const RewriteHost& config) :
+    rewrite_policy_(config.rewrite_policy()),
+    header_(config.header()),
+    specified_host_(config.specified_host()) {
+    path_matchers_.reserve(config.path_matchers_size());
+    for (const auto& pm : config.path_matchers()) {
+        PathMatcherConstSharedPtr matcher(new Envoy::Matchers::PathMatcher(pm));
+        path_matchers_.emplace_back(matcher);
+    }
+}
+
+GressFilterConfig::GressFilterConfig(const GressPbConfig& config) :
+    instance_(config.instance()),
+    self_namespace_(config.self_namespace()),
+    add_origin_source_(config.add_origin_source()),
+    max_logging_body_size_per_reqeuest_(config.max_logging_body_size_per_reqeuest()) {
+    rewrite_host_config_.reserve(config.rewrite_host_config_size());
+    for (const auto& rh : config.rewrite_host_config()) {
+        rewrite_host_config_.emplace_back(RewriteHostConfig(rh));
+    }
+}
+
 Http::FilterHeadersStatus GressFilter::decodeHeaders(Http::RequestHeaderMap& headers,
                                                      bool) {
     // store some useful headers
@@ -50,12 +83,8 @@ Http::FilterHeadersStatus GressFilter::decodeHeaders(Http::RequestHeaderMap& hea
     }
 
     // rewrite host to choose a new route
-    if (config_.rewrite_host()) {
-        auto kuscia_host = headers.getByKey(KusciaCommon::HeaderKeyKusciaHost).value_or("");
-        if (!kuscia_host.empty()) {
-            headers.setHost(kuscia_host);
-            decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
-        }
+    if (rewriteHost(headers)) {
+        decoder_callbacks_->downstreamCallbacks()->clearRouteCache();
     } else {
         // replace ".svc:" with ".svc" for internal request
         size_t n = host_.rfind(".svc:");
@@ -67,11 +96,11 @@ Http::FilterHeadersStatus GressFilter::decodeHeaders(Http::RequestHeaderMap& hea
     }
 
     // add origin-source if not exist
-    if (config_.add_origin_source()) {
+    if (config_->addOriginSource()) {
         auto origin_source = headers.getByKey(KusciaCommon::HeaderKeyOriginSource)
                              .value_or(std::string());
         if (origin_source.empty()) {
-            headers.addCopy(KusciaCommon::HeaderKeyOriginSource, config_.self_namespace());
+            headers.addCopy(KusciaCommon::HeaderKeyOriginSource, config_->selfNamespace());
         }
     }
 
@@ -96,21 +125,21 @@ Http::FilterHeadersStatus GressFilter::encodeHeaders(Http::ResponseHeaderMap& he
             auto inner_msg = headers.get(KusciaCommon::HeaderKeyErrorMessageInternal);
             if (inner_msg.size() == 1 && inner_msg[0] != nullptr && !inner_msg[0]->value().empty()) {
                 err_msg = fmt::format("Domain {}.{}: {}",
-                                      config_.self_namespace(),
-                                      config_.instance(),
+                                      config_->selfNamespace(),
+                                      config_->instance(),
                                       inner_msg[0]->value().getStringView());
                 headers.remove(KusciaCommon::HeaderKeyErrorMessageInternal);
             } else {
                 err_msg = fmt::format("Domain {}.{}<--{} return http code {}.",
-                                      config_.self_namespace(),
-                                      config_.instance(),
+                                      config_->selfNamespace(),
+                                      config_->instance(),
                                       host_,
                                       headers.getStatusValue());
             }
         } else if (result[0] != nullptr) {
             err_msg = fmt::format("Domain {}.{}<--{}",
-                                  config_.self_namespace(),
-                                  config_.instance(),
+                                  config_->selfNamespace(),
+                                  config_->instance(),
                                   result[0]->value().getStringView());
 
         }
@@ -133,12 +162,68 @@ Http::FilterDataStatus GressFilter::encodeData(Buffer::Instance& data, bool end_
     return Http::FilterDataStatus::Continue;
 }
 
+bool GressFilter::rewriteHost(Http::RequestHeaderMap& headers) {
+    for (const auto& rh : config_->rewriteHostConfig()) {
+        if (rewriteHost(headers, rh)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GressFilter::rewriteHost(Http::RequestHeaderMap& headers, const RewriteHostConfig& rh) {
+    auto header_value = headers.getByKey(Http::LowerCaseString(rh.header())).value_or("");
+    if (header_value.empty()) {
+        return false;
+    }
+
+    if (rh.pathMatchers().size() > 0) {
+        const absl::string_view path = headers.getPathValue();
+        bool path_match = false;
+        for (const auto& pm : rh.pathMatchers()) {
+            if (pm->match(path)) {
+                path_match = true;
+                break;
+            }
+        }
+        if (!path_match) {
+            return false;
+        }
+    }
+
+    switch (rh.rewritePolicy()) {
+    case RewriteHost::RewriteHostWithHeader: {
+        headers.setHost(header_value);
+        return true;
+    }
+    case RewriteHost::RewriteNamespaceWithHeader: {
+        auto host_value = replaceNamespaceInHost(headers.getHostValue(), header_value);
+        if (!host_value.empty()) {
+            headers.setHost(host_value);
+            return true;
+        }
+        break;
+    }
+    case RewriteHost::RewriteHostWithSpecifiedHost: {
+        if (!rh.specifiedHost().empty()) {
+            headers.setHost(rh.specifiedHost());
+            return true;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return false;
+}
+
 bool GressFilter::recordBody(Buffer::OwnedImpl& body, Buffer::Instance& data,
                              bool end_stream, bool is_req) {
     auto& stream_info = is_req ? decoder_callbacks_->streamInfo() : encoder_callbacks_->streamInfo();
     std::string body_key = is_req ? "request_body" : "response_body";
 
-    uint64_t logging_size = static_cast<uint64_t>(config_.max_logging_body_size_per_reqeuest());
+    uint64_t logging_size = static_cast<uint64_t>(config_->maxLoggingBodySizePerReqeuest());
     bool record_body = true;
     if (data.length() > 0) {
         if (logging_size > 0 && body.length() + data.length() > logging_size) {

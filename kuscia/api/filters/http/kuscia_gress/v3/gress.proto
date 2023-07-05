@@ -1,0 +1,49 @@
+// Copyright 2023 Ant Group Co., Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package envoy.extensions.filters.http.kuscia_gress.v3;
+option go_package = "github.com/secretflow/kuscia-envoy/kuscia/api/filters/http/kuscia_gress/v3";
+
+import "envoy/type/matcher/v3/path.proto";
+
+message Gress {
+   // RewriteHostByHeader provides some policies to rewrite host to choose a new route:
+   // Firstly, the following conditions should be met:
+   // 1. the request headers contains an entry named ${header} 
+   // 2. the uri path matchs one of ${path_matchers} if it's not empty
+   // Secondly, the host will be rewrited by ${rewrite_policy}:
+   // RewriteHostWithHeader: rewrite host with header value of ${header}
+   // RewriteNamespaceWithHeader: rewrite namespace in host with  header value of ${header}
+   // RewriteHostWithSpecifiedHost: rewrite host with ${specified_host}
+   message RewriteHostByHeader {
+        enum RewritePolicy {
+            RewriteHostWithHeader = 0;
+            RewriteNamespaceWithHeader = 1;
+            RewriteHostWithSpecifiedHost = 2;
+        }
+        RewritePolicy rewrite_policy = 1;
+        string header = 2;
+        repeated type.matcher.v3.PathMatcher path_matchers = 3;
+        string specified_host = 4; 
+   }
+
+   string instance = 1;
+   string self_namespace = 2;
+   repeated RewriteHostByHeader rewrite_host_config = 3;
+   bool add_origin_source = 4;
+   int32 max_logging_body_size_per_reqeuest = 5;
+}

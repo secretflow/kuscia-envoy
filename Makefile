@@ -1,9 +1,16 @@
 BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
 
+# Image URL to use all building image targets
+DATETIME = $(shell date +"%Y%m%d%H%M%S")
+KUSCIA_VERSION_TAG = $(shell git describe --abbrev=7 --always)
+COMMIT_ID = $(shell git log -1 --pretty="format:%h")
+TAG = ${KUSCIA_VERSION_TAG}-${DATETIME}-${COMMIT_ID}
+IMG ?= secretflow/kuscia-envoy:${TAG}
+
 CONTAINER_NAME ?= "build-envoy"
 COMPILE_MODE ?=opt
 TARGET ?= "//:envoy"
-BUILD_OPTS ?=
+BUILD_OPTS ?="--strip=always"
 
 TEST_COMPILE_MODE = fastbuild
 TEST_TARGET ?= "//kuscia/test/..."
@@ -38,7 +45,7 @@ build-envoy:
 
 .PHONY: build-envoy-local
 build-envoy-local:
-	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS}
+	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
 
 .PHONY: test-envoy
 test-envoy:
@@ -55,3 +62,7 @@ test-envoy-local:
 clean:
 	$(call stop_docker)
 	rm -rf output
+
+.PHONY: image
+image: build-envoy
+	docker build -t ${IMG} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .

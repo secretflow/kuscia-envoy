@@ -1,11 +1,11 @@
 // Copyright 2023 Ant Group Co., Ltd.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //   http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,8 @@ namespace Extensions {
 namespace HttpFilters {
 namespace KusciaHeaderDecorator {
 
+using KusciaHeader = Envoy::Extensions::HttpFilters::KusciaCommon::KusciaHeader;
+
 HeaderDecoratorFilter::HeaderDecoratorFilter(const HeaderDecoratorPbConfig& config) {
     for (const auto& source_headers : config.append_headers()) {
         std::vector<std::pair<std::string, std::string>> headers;
@@ -43,7 +45,7 @@ Http::FilterHeadersStatus HeaderDecoratorFilter::decodeHeaders(Http::RequestHead
 }
 
 void HeaderDecoratorFilter::appendHeaders(Http::RequestHeaderMap& headers) const {
-    auto source = headers.getByKey(KusciaCommon::HeaderKeyKusciaSource).value_or("");
+    auto source = KusciaHeader::getSource(headers).value_or("");
     auto iter = append_headers_.find(source);
     if (iter != append_headers_.end()) {
         for (const auto& entry : iter->second) {

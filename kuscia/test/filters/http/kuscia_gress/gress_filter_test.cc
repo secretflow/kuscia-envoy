@@ -1,11 +1,11 @@
 // Copyright 2023 Ant Group Co., Ltd.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //   http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,14 +45,16 @@ class GressFilterTest : public testing::Test {
         filter_.setDecoderFilterCallbacks(decoder_callbacks_);
     }
 
-    GressPbConfig setupConfig() {
+    GressFilterConfigSharedPtr setupConfig() {
         GressPbConfig proto_config;
         proto_config.set_instance("foo");
         proto_config.set_self_namespace("alice");
         proto_config.set_add_origin_source(true);
         proto_config.set_max_logging_body_size_per_reqeuest(5);
-        proto_config.set_rewrite_host(true);
-        return proto_config;
+        auto rh = proto_config.add_rewrite_host_config();
+        rh->set_header("kuscia-Host");
+        rh->set_rewrite_policy(RewriteHost::RewriteHostWithHeader);
+        return GressFilterConfigSharedPtr(new GressFilterConfig(proto_config));
     }
 
     void enableRecordBody () {
@@ -62,7 +64,7 @@ class GressFilterTest : public testing::Test {
     }
 
     GressFilter filter_;
-    GressPbConfig config_;
+    GressFilterConfigSharedPtr config_;
     NiceMock<Http::MockStreamDecoderFilterCallbacks> decoder_callbacks_;
 };
 
@@ -71,7 +73,7 @@ TEST_F(GressFilterTest, EmptyHost) {
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_.decodeHeaders(headers, true));
     KusciaHeaderChecker::checkRequestHeaders(headers,
     ExpectHeaders{{kHost, ""},
-        {kOrginSource, config_.self_namespace()}});
+        {kOrginSource, config_->selfNamespace()}});
 }
 
 TEST_F(GressFilterTest, OtherHost) {
@@ -79,7 +81,7 @@ TEST_F(GressFilterTest, OtherHost) {
     EXPECT_EQ(Http::FilterHeadersStatus::Continue, filter_.decodeHeaders(headers, true));
     KusciaHeaderChecker::checkRequestHeaders(headers,
     ExpectHeaders{{kHost, "baidu.com"},
-        {kOrginSource, config_.self_namespace()}});
+        {kOrginSource, config_->selfNamespace()}});
 }
 
 TEST_F(GressFilterTest, RewriteHost) {
