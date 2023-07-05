@@ -11,6 +11,7 @@ api_proto_package()
 #"@envoy//envoy/http:header_map_interface",
 envoy_cc_library(
     name = "kuscia_common",
+    srcs = ["kuscia_header.cc"],
     hdrs = [
         "common.h",
         "kuscia_header.h",

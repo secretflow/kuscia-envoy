@@ -28,5 +28,7 @@ envoy_cc_library(
         ":gress_filter",
         "@envoy//envoy/registry",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
+	    "@envoy_api//envoy/type/matcher/v3:pkg_cc_proto",
+        "@envoy//source/common/matcher:matcher_lib",
     ],
 )

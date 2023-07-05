@@ -1,11 +1,11 @@
 // Copyright 2023 Ant Group Co., Ltd.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //   http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,8 +27,10 @@ namespace KusciaTokenAuth {
 
 constexpr absl::string_view UnauthorizedBodyMessage = "unauthorized.";
 
+using KusciaHeader = Envoy::Extensions::HttpFilters::KusciaCommon::KusciaHeader;
+
 Http::FilterHeadersStatus TokenAuthFilter::decodeHeaders(Http::RequestHeaderMap& headers,
-        bool) {
+                                                         bool) {
     // Disable filter per route config if applies
     if (decoder_callbacks_->route() != nullptr) {
         const auto* per_route_config =
@@ -38,7 +40,7 @@ Http::FilterHeadersStatus TokenAuthFilter::decodeHeaders(Http::RequestHeaderMap&
         }
     }
 
-    auto source = headers.getByKey(KusciaCommon::HeaderKeyKusciaSource).value_or("");
+    auto source = KusciaHeader::getSource(headers).value_or("");
     auto token = headers.getByKey(KusciaCommon::HeaderKeyKusciaToken).value_or("");
     bool is_valid = config_->validateSource(source, token);
     if (!is_valid) {

@@ -14,9 +14,15 @@ The extension filters are:
 - kuscia_header_decorator: add specified headers before forwarding requests to upstream service. For example,
 you can assign a token for each source, then the upstream service can use the token to authorize requests.
 
-## build
+## build executable files
 ```shell
 make build-envoy
+
+## build image
+```shell
+make image
+```
+
 ```
 
 ## test
