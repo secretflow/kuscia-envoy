@@ -16,9 +16,6 @@ envoy_cc_library(
         "@envoy//source/common/buffer:buffer_lib",
         "@envoy//source/common/http:header_utility_lib",
         "@envoy//source/extensions/filters/http/common:pass_through_filter_lib",
-        "@envoy//source/common/http:codes_lib",
-        "@com_github_nlohmann_json//:json",
-        "@envoy//source/common/api:os_sys_calls_lib"
     ],
 )
 
