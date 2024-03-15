@@ -42,20 +42,20 @@ Http::FilterHeadersStatus TokenAuthFilter::decodeHeaders(Http::RequestHeaderMap&
 
     auto source = KusciaHeader::getSource(headers).value_or("");
     auto token = headers.getByKey(KusciaCommon::HeaderKeyKusciaToken).value_or("");
-    bool is_valid = config_->validateSource(source, token);
-    if (!is_valid) {
+    auto status = config_->validateSource(source, token);
+    if (status != Http::Code::OK) {
         ENVOY_LOG(warn, "Check Kuscia Source Token fail, {}: {}, {}: {}",
                   KusciaCommon::HeaderKeyKusciaSource, source,
                   KusciaCommon::HeaderKeyKusciaToken, token);
-        sendUnauthorizedResponse();
+        sendAuthorizeFailedResponse(status);
         return Http::FilterHeadersStatus::StopIteration;
     }
 
     return Http::FilterHeadersStatus::Continue;
 }
 
-void TokenAuthFilter::sendUnauthorizedResponse() {
-    decoder_callbacks_->sendLocalReply(Http::Code::Unauthorized, UnauthorizedBodyMessage, nullptr,
+void TokenAuthFilter::sendAuthorizeFailedResponse(Http::Code status) {
+    decoder_callbacks_->sendLocalReply(status, UnauthorizedBodyMessage, nullptr,
                                        absl::nullopt, Envoy::EMPTY_STRING);
 }
 
@@ -70,19 +70,19 @@ TokenAuthConfig::TokenAuthConfig(const TokenAuthPbConfig& config) {
     }
 }
 
-bool TokenAuthConfig::validateSource(absl::string_view source, absl::string_view token) const {
+Http::Code TokenAuthConfig::validateSource(absl::string_view source, absl::string_view token) const {
     static const std::string NoopToken = "noop";
 
     auto iter = source_token_map_.find(source);
     if (iter == source_token_map_.end()) {
-        return false;
+        return Http::Code::NotFound;
     }
     for (const auto& disired_token : iter->second) {
         if (token == disired_token || disired_token == NoopToken) {
-            return true;
+            return Http::Code::OK;
         }
     }
-    return false;
+    return Http::Code::Unauthorized;
 }
 
 } // namespace KusciaTokenAuth

@@ -38,6 +38,7 @@ endef
 build-envoy:
 	@$(call start_docker)
 	docker exec -it ${CONTAINER_NAME} make build-envoy-local
+	docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
 	mkdir -p output/bin
 	mkdir -p output/conf
 	docker cp ${CONTAINER_NAME}:/home/admin/dev/bazel-bin/envoy output/bin

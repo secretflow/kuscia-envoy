@@ -22,17 +22,23 @@ namespace KusciaCommon {
 constexpr absl::string_view InterConnProtocolBFIA{"bfia"};
 constexpr absl::string_view InterConnProtocolKuscia{"kuscia"};
 
-absl::optional<absl::string_view> KusciaHeader::getSource(const Http::RequestHeaderMap& headers) {
-    auto protocol = headers.getByKey(KusciaCommon::HeaderKeyInterConnProtocol);
-    if (protocol && protocol.value() == InterConnProtocolBFIA) {
-        auto ptpSource = headers.getByKey(HeaderKeyBFIAPTPSource);
-        return ptpSource ? ptpSource : headers.getByKey(HeaderKeyBFIAScheduleSource);
-    }
-    return  headers.getByKey(HeaderKeyKusciaSource);
+absl::optional<absl::string_view>
+KusciaHeader::getSource(const Http::RequestHeaderMap &headers) {
+  auto kusciaSource = headers.getByKey(HeaderKeyKusciaSource);
+  if (kusciaSource) {
+    return kusciaSource;
+  }
+  // BFIA protocol
+  auto protocol = headers.getByKey(KusciaCommon::HeaderKeyInterConnProtocol);
+  if (protocol && protocol.value() == InterConnProtocolBFIA) {
+    auto ptpSource = headers.getByKey(HeaderKeyBFIAPTPSource);
+    return ptpSource ? ptpSource
+                     : headers.getByKey(HeaderKeyBFIAScheduleSource);
+  }
+  return kusciaSource;
 }
 
 } // namespace KusciaCommon
 } // namespace HttpFilters
 } // namespace Extensions
 } // namespace Envoy
-

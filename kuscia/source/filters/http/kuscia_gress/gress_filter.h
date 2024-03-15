@@ -15,9 +15,11 @@
 
 #pragma once
 
-#include <unordered_map>
+#include <cstdint>
+#include <string>
 #include <memory>
 
+#include "include/nlohmann/json.hpp"
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/logger.h"
 #include "source/extensions/filters/http/common/pass_through_filter.h"
@@ -105,7 +107,10 @@ class GressFilter : public Envoy::Http::PassThroughFilter,
         host_(),
         request_id_(),
         record_request_body_(false),
-        record_response_body_(false) {}
+        record_response_body_(false),
+        is_err_formatted_(false),
+        is_http_1_0_(false),
+        status_code_(0) {}
 
     Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap& headers,
                                             bool) override;
@@ -115,10 +120,25 @@ class GressFilter : public Envoy::Http::PassThroughFilter,
                                             bool end_stream) override;
     Http::FilterDataStatus encodeData(Buffer::Instance& data, bool end_stream) override;
 
+    Http::FilterTrailersStatus encodeTrailers(Http::ResponseTrailerMap& headers) override;
+
   private:
     bool rewriteHost(Http::RequestHeaderMap& headers);
     bool rewriteHost(Http::RequestHeaderMap& headers, const RewriteHostConfig& rh);
     bool recordBody(Buffer::OwnedImpl& body, Buffer::Instance& data, bool end_stream, bool is_req);
+
+    nlohmann::json fromStreamInfo(StreamInfo::StreamInfo& stream_info, const std::string& domain);
+    nlohmann::json makeTraceBody(int code, std::string&& message);
+
+    std::string getHeaderValue(const Http::ResponseHeaderMap& headers, const Http::LowerCaseString& key);
+    std::string dump(const nlohmann::json& json, bool pretty = false);
+    std::string strip(absl::string_view sv);
+    std::string genPrompt(uint64_t flag, std::string&& detail);
+
+    void buildAndFlushTrace(Buffer::Instance& data, std::string&& err_body, bool header);
+    void appendToTrace(nlohmann::json& json, nlohmann::json& item);
+    bool isValidIpAddress(const std::string& address);
+    bool isLocalhost(const std::string& address);
 
     GressFilterConfigSharedPtr config_;
     std::string host_;
@@ -126,8 +146,14 @@ class GressFilter : public Envoy::Http::PassThroughFilter,
 
     bool record_request_body_;
     bool record_response_body_;
+    bool is_err_formatted_;
+    bool is_http_1_0_;
+
+    Buffer::OwnedImpl err_resp_body_;
     Buffer::OwnedImpl req_body_;
     Buffer::OwnedImpl resp_body_;
+
+    uint64_t status_code_;
 };
 
 } // namespace KusciaGress
