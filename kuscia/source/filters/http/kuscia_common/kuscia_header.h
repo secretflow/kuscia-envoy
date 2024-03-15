@@ -34,6 +34,7 @@ const Http::LowerCaseString HeaderKeyOriginSource("Kuscia-Origin-Source");
 
 
 const Http::LowerCaseString HeaderKeyErrorMessage("Kuscia-Error-Message");
+const Http::LowerCaseString HeaderKeyFmtError("Kuscia-Error-Formatted");
 const Http::LowerCaseString HeaderKeyErrorMessageInternal("Kuscia-Error-Message-Internal");
 const Http::LowerCaseString HeaderKeyRecordBody("Kuscia-Record-Body");
 
