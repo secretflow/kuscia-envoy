@@ -6,6 +6,13 @@ KUSCIA_VERSION_TAG = $(shell git describe --abbrev=7 --always)
 COMMIT_ID = $(shell git log -1 --pretty="format:%h")
 TAG = ${KUSCIA_VERSION_TAG}-${DATETIME}-${COMMIT_ID}
 IMG ?= secretflow/kuscia-envoy:${TAG}
+# Get current architecture information
+UNAME_M_OUTPUT := $(shell uname -m)
+
+# To configure the ARCH variable to either arm64 or amd64
+ARCH := $(if $(filter aarch64,$(UNAME_M_OUTPUT)),arm64,$(if $(filter arm64,$(UNAME_M_OUTPUT)),arm64,amd64))
+
+BUILD_IMAGE = --platform=linux/${ARCH} envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
 
 CONTAINER_NAME ?= "build-envoy"
 COMPILE_MODE ?=opt
@@ -66,4 +73,4 @@ clean:
 
 .PHONY: image
 image: build-envoy
-	docker build -t ${IMG} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+	docker build -t ${IMG} --build-arg ARCH=${ARCH} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .

@@ -1,4 +1,5 @@
-FROM openanolis/anolisos:8.8
+ARG ARCH=amd64
+FROM --platform=linux/${ARCH} openanolis/anolisos:8.8
 
 ENV TZ=Asia/Shanghai
 
