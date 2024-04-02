@@ -4,28 +4,101 @@ version: 2.1
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
-jobs:
-  build-envoy:
+
+executors:
+  linux_x64_executor: # declares a reusable executor
     docker:
       - image: secretflow/ubuntu-base-ci:latest
     resource_class: 2xlarge
+    parameters:
+      arch:
+        type: string
     shell: /bin/bash --login -eo pipefail
+  linux_aarch64_executor:
+    docker:
+      - image: secretflow/ubuntu-base-ci:latest
+    resource_class: arm.2xlarge
+    parameters:
+      arch:
+        type: string
+    shell: /bin/bash --login -eo pipefail
+
+commands:
+  build-envoy:
+    parameters:
+      arch:
+        type: string
     steps:
-      - checkout
       - run:
-          name: Build envoy
+          name: "Build envoy"
           command: |
             git submodule update --init
             git config --global --add safe.directory ./
             bazel build //:envoy -c opt --ui_event_filters=-info,-debug,-warning --jobs 16
-            mkdir -p build_apps
-            mv bazel-bin/envoy build_apps
+            mkdir -p build_apps/<< parameters.arch >> 
+            mv bazel-bin/envoy build_apps/<< parameters.arch >>
       - store_artifacts:
           path: build_apps
+
+jobs:
+  linux_publish:
+    parameters:
+      arch:
+        type: string
+      executor:
+        type: string
+    executor: <<parameters.executor>>
+    steps:
+      - checkout
+      - build-envoy
+      - arch: <<parameters.arch>>
+  docker_image_publish:
+    docker:
+      - image: cimg/deploy:2023.06.1
+    parameters:
+      arch:
+        type: string
+    steps:
+      - attach_workspace:
+          at: build_apps
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            docker buildx create --name kuscia-envoy --platform linux/arm64,linux/amd64 --use
+            # login docker
+            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
+            IMG=envoy:latest
+            mkdir -p output/bin
+            mv build_apps/<< parameters.arch >>/envoy output/bin
+            docker buildx build -t ${IMG} --build-arg ARCH=${arm64} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+            docker buildx build -t ${IMG} --build-arg ARCH=${amd64} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+            docker push ${IMG}
+            # login docker - aliyun
+            docker login -u ${ALIYUN_DOCKER_USERNAME} -p ${ALIYUN_DOCKER_PASSWORD} secretflow-registry.cn-hangzhou.cr.aliyuncs.com
+            
+            #docker tag ${IMG} xxxx:xxx
+            #docker push ${IMG} xxxx:xxx
+            
+            
+            docker tag ${IMG} secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest
+            docker push secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest
+            
+
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
   build-workflow:
     jobs:
-      - build-envoy
+      - linux_publish:
+          matrix:
+            executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
+          parameters:
+            arch: [ "amd64", "arm64" ]
+      - docker_image_publish:
+          requires:
+            - linux_publish
+          parameters:
+            arch: [ "amd64", "arm64" ]
