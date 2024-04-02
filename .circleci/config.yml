@@ -71,8 +71,10 @@ jobs:
             docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
             IMG=envoy:latest
             mkdir -p output/bin
-            mv build_apps/<< parameters.arch >>/envoy output/bin
+            mv build_apps/arm64/envoy output/bin
             docker buildx build -t ${IMG} --build-arg ARCH=${arm64} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+            mkdir -p output/bin
+            mv build_apps/amd64/envoy output/bin
             docker buildx build -t ${IMG} --build-arg ARCH=${amd64} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
             docker push ${IMG}
             # login docker - aliyun

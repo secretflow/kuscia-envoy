@@ -1,3 +1,6 @@
+SHELL := /bin/bash
+BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
+
 # Image URL to use all building image targets
 DATETIME = $(shell date +"%Y%m%d%H%M%S")
 KUSCIA_VERSION_TAG = $(shell git describe --abbrev=7 --always)
