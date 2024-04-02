@@ -17,6 +17,8 @@
 
 #include "envoy/http/header_map.h"
 
+#include "re2/re2.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace HttpFilters {
@@ -41,10 +43,28 @@ const Http::LowerCaseString HeaderKeyRecordBody("Kuscia-Record-Body");
 const Http::LowerCaseString HeaderKeyEncryptVersion("Kuscia-Encrypt-Version");
 const Http::LowerCaseString HeaderKeyEncryptIv("Kuscia-Encrypt-Iv");
 
+const Http::LowerCaseString HeaderKeyForwardRequestId("Kuscia-Foward-Request-Id");
+
 class KusciaHeader {
   public:
     static absl::optional<absl::string_view> getSource(const Http::RequestHeaderMap& headers);
 };
+
+// receiver.${peer}.svc/poll?timeout=xxx&service=xxx
+const re2::RE2 PollHostPattern("receiver\\.(.*)\\.svc");
+
+const std::string PollPathPrefix("/poll?");
+const std::string ReplyPathPrefix("/reply?");
+const std::string ServiceParamKey("service");
+const std::string TimeoutParamKey("timeout");
+const std::string RequestIdParamKey("msgid");
+
+const std::string GatewayClusterName("handshake-cluster");
+const std::string GatewayHostName("kuscia-handshake");
+const std::string GatewayRegisterPath("/svc/register");
+const std::string GatewayUnregisterPath("/svc/unregister");
+
+const std::string InternalClusterHost("127.0.0.1:80");
 
 } // namespace KusciaCommon
 } // namespace HttpFilters
