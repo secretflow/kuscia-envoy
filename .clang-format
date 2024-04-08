@@ -1,0 +1,8 @@
+Language: Cpp
+BasedOnStyle: LLVM
+DerivePointerAlignment: false
+PointerAlignment: Left
+ColumnLimit: 99
+MaxEmptyLinesToKeep: 1
+PenaltyBreakAssignment: 2
+AlignTrailingComments: true

@@ -13,6 +13,8 @@ envoy_cc_binary(
         "//kuscia/source/filters/http/kuscia_crypt:kuscia_crypt_config",
         "//kuscia/source/filters/http/kuscia_token_auth:kuscia_token_auth_config",
         "//kuscia/source/filters/http/kuscia_header_decorator:kuscia_header_decorator_config",
+        "//kuscia/source/filters/http/kuscia_poller:kuscia_poller_config",
+        "//kuscia/source/filters/http/kuscia_receiver:kuscia_receiver_config",
         "@envoy//source/exe:envoy_main_entry_lib",
     ],
 )
