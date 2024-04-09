@@ -20,17 +20,14 @@ executors:
 commands:
   build_envoy:
     steps:
-      - checkout
       - run:
           name: "make build-envoy-local"
           command: |
             git submodule update --init
             git config --global --add safe.directory ./
-            bazel build //:envoy -c opt --ui_event_filters=-info,-debug,-warning --jobs 16
-            mkdir -p build_apps/$(uname -m)
-            mv bazel-bin/envoy build_apps/$(uname -m)
+            make build-envoy-local
       - store_artifacts:
-          path: build_apps
+          path: output
 
 jobs:
   linux_build_envoy:
@@ -46,33 +43,27 @@ jobs:
       - image: cimg/deploy:2023.06.1
     steps:
       - attach_workspace:
-          at: build_apps
+          at: output
       - checkout
       - setup_remote_docker
       - run:
           name: Build Docker image
           command: |
             docker buildx create --name kuscia-envoy --platform linux/arm64,linux/amd64 --use
-            # login docker
-            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
             IMG=secretflow/kuscia-envoy:latest
             
-            mkdir -p output/bin
-            mv build_apps/aarch64/envoy output/bin
-            docker buildx build -t ${IMG} --platform linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            #login docker
+            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
             
-            mv build_apps/x86_64/envoy output/bin
-            docker buildx build -t ${IMG} --platform linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t ${IMG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            
             
             # login docker - aliyun
             docker login -u ${ALIYUN_DOCKER_USERNAME} -p ${ALIYUN_DOCKER_PASSWORD} secretflow-registry.cn-hangzhou.cr.aliyuncs.com
             
-            mv build_apps/aarch64/envoy output/bin
-            docker buildx build -t secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest --platform linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            
-            mv build_apps/x86_64/envoy output/bin
-            docker buildx build -t secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest --platform linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            
+            docker buildx build -t secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+
+
 
 
 # Orchestrate jobs using workflows
@@ -80,16 +71,15 @@ jobs:
 workflows:
   build-workflow:
     jobs:
-      - linux_publish:
+      - linux_build_envoy:
           matrix:
             parameters:
               executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
-          filters:
-            tags:
-              only: /.*b[0-9]/
       - docker_image_publish:
           requires:
-            - linux_publish
+            - linux_build_envoy
           filters:
+            branches:
+              ignore: /.*/
             tags:
-              only: /.*b[0-9]/
+              only: /^v.*/
