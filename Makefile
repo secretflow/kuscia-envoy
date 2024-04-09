@@ -24,7 +24,7 @@ define start_docker
 		git submodule update --init;\
 	fi;
 	if [[ ! -n $$(docker ps -q -f "name=^$(CONTAINER_NAME)$$") ]]; then\
-		docker run -itd --rm -v $(shell pwd):/home/admin/dev -w /home/admin/dev --name $(CONTAINER_NAME) \
+		docker run -itd --rm -v $(shell pwd):/home/admin/dev -v $(shell pwd)/cache:/root/.cache/bazel -w /home/admin/dev --name $(CONTAINER_NAME) \
 		-e GOPROXY='https://goproxy.cn,direct' --cap-add=NET_ADMIN $(BUILD_IMAGE);\
 		docker exec -it $(CONTAINER_NAME) /bin/bash -c 'git config --global --add safe.directory /home/admin/dev';\
 	fi;

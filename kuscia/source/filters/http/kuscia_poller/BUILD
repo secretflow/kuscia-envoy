@@ -6,32 +6,42 @@ load(
 package(default_visibility = ["//visibility:public"])
 
 envoy_cc_library(
-    name = "gress_filter",
-    srcs = ["gress_filter.cc"],
-    hdrs = ["gress_filter.h"],
+    name = "poller_filter",
+    srcs = [
+        "callbacks.cc",
+        "poller_filter.cc",
+    ],
+    hdrs = [
+        "common.h",
+        "callbacks.h",
+        "poller_filter.h",
+    ],
     repository = "@envoy",
     deps = [
-        "//kuscia/api/filters/http/kuscia_gress/v3:pkg_cc_proto",
+        "//kuscia/api/filters/http/kuscia_poller/v3:pkg_cc_proto",
+        "//kuscia/api/filters/http/kuscia_receiver/v3:pkg_cc_proto",
         "//kuscia/source/filters/http/kuscia_common",
         "@envoy//source/common/buffer:buffer_lib",
+        "@envoy//source/common/common:base64_lib",
         "@envoy//source/common/http:header_utility_lib",
+        "@envoy//source/common/common:assert_lib",
         "@envoy//source/extensions/filters/http/common:pass_through_filter_lib",
-        "@envoy//source/common/http:codes_lib",
-        "@com_github_nlohmann_json//:json",
-        "@envoy//source/common/api:os_sys_calls_lib",
     ],
 )
 
 envoy_cc_library(
-    name = "kuscia_gress_config",
-    srcs = ["config.cc"],
-    hdrs = ["config.h"],
+    name = "kuscia_poller_config",
+    srcs = [
+        "config.cc",
+    ],
+    hdrs = [
+        "common.h",
+        "config.h",
+    ],
     repository = "@envoy",
     deps = [
-        ":gress_filter",
+        ":poller_filter",
         "@envoy//envoy/registry",
         "@envoy//source/extensions/filters/http/common:factory_base_lib",
-	    "@envoy_api//envoy/type/matcher/v3:pkg_cc_proto",
-        "@envoy//source/common/matcher:matcher_lib",
     ],
 )
