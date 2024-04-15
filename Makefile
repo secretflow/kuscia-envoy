@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
 
 # Image URL to use all building image targets
@@ -7,7 +8,7 @@ COMMIT_ID = $(shell git log -1 --pretty="format:%h")
 TAG = ${KUSCIA_VERSION_TAG}-${DATETIME}-${COMMIT_ID}
 IMG ?= secretflow/kuscia-envoy:${TAG}
 
-CONTAINER_NAME ?= "build-envoy"
+CONTAINER_NAME ?= "build-envoy-$(shell echo ${USER})"
 COMPILE_MODE ?=opt
 TARGET ?= "//:envoy"
 BUILD_OPTS ?="--strip=always"
@@ -21,7 +22,7 @@ define start_docker
 		git submodule update --init;\
 	fi;
 	if [[ ! -n $$(docker ps -q -f "name=^$(CONTAINER_NAME)$$") ]]; then\
-		docker run -itd --rm -v $(shell pwd):/home/admin/dev -w /home/admin/dev --name $(CONTAINER_NAME) \
+		docker run -itd --rm -v $(shell pwd)/cache:/root/.cache/bazel -v $(shell pwd):/home/admin/dev -w /home/admin/dev --name $(CONTAINER_NAME) \
 		-e GOPROXY='https://goproxy.cn,direct' --cap-add=NET_ADMIN $(BUILD_IMAGE);\
 		docker exec -it $(CONTAINER_NAME) /bin/bash -c 'git config --global --add safe.directory /home/admin/dev';\
 	fi;
