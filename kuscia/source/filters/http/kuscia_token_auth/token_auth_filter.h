@@ -20,7 +20,6 @@
 
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/logger.h"
-#include "source/common/http/utility.h"
 #include "source/extensions/filters/http/common/pass_through_filter.h"
 
 #include "kuscia/api/filters/http/kuscia_token_auth/v3/token_auth.pb.h"
@@ -44,7 +43,7 @@ class TokenAuthFilter : public Http::PassThroughDecoderFilter,
                                             bool) override;
 
   private:
-    void sendAuthorizeFailedResponse(Http::Code status);
+    void sendUnauthorizedResponse();
 
     TokenAuthConfigSharedPtr config_;
 };
@@ -53,7 +52,7 @@ class TokenAuthConfig {
   public:
     explicit TokenAuthConfig(const TokenAuthPbConfig& config);
 
-    Http::Code validateSource(absl::string_view source, absl::string_view token) const;
+    bool validateSource(absl::string_view source, absl::string_view token) const;
 
   private:
     std::map<std::string, std::vector<std::string>, std::less<>> source_token_map_;
