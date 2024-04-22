@@ -44,12 +44,12 @@ endef
 .PHONY: build-envoy
 build-envoy:
 	@$(call start_docker)
-	##docker exec -it ${CONTAINER_NAME} make build-envoy-local
-	##docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
-	##mkdir -p output/linux/${ARCH}/bin
-	##mkdir -p output/linux/${ARCH}/conf
-	##docker cp ${CONTAINER_NAME}:/home/admin/dev/bazel-bin/envoy output/linux/${ARCH}/bin
-	##docker cp ${CONTAINER_NAME}:/home/admin/dev/kuscia/conf/envoy.yaml output/linux/${ARCH}/conf
+	docker exec -it ${CONTAINER_NAME} make build-envoy-local
+	docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
+	mkdir -p output/linux/${ARCH}/bin
+	mkdir -p output/linux/${ARCH}/conf
+	docker cp ${CONTAINER_NAME}:/home/admin/dev/bazel-bin/envoy output/linux/${ARCH}/bin
+	docker cp ${CONTAINER_NAME}:/home/admin/dev/kuscia/conf/envoy.yaml output/linux/${ARCH}/conf
 
 .PHONY: build-envoy-local
 build-envoy-local:
