@@ -1,5 +1,4 @@
 bazel-*
-/build/linux/
 .bazel-cache
 .idea
 .vscode
