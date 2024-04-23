@@ -20,12 +20,13 @@ executors:
 commands:
   build_envoy:
     steps:
+      - setup_remote_docker
       - run:
           name: "make build-envoy-local"
           command: |
             git submodule update --init
             git config --global --add safe.directory ./
-            make build-envoy-local
+            make build-envoy
       - store_artifacts:
           path: output
 
