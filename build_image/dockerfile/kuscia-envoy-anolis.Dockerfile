@@ -6,8 +6,11 @@ ENV TZ=Asia/Shanghai
 
 ARG ROOT_DIR="/home/kuscia"
 
-COPY ./output/$TARGETPLATFORM $ROOT_DIR/
+COPY ./output $ROOT_DIR/
 
+RUN if [ -d "$ROOT_DIR/$TARGETPLATFORM" ]; then \
+        mv -f "$ROOT_DIR/$TARGETPLATFORM"/* "$ROOT_DIR"/; \
+    fi
 WORKDIR ${ROOT_DIR}
 
 ENTRYPOINT ["/bin/bash", "--"]

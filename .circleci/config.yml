@@ -26,6 +26,19 @@ commands:
             git submodule update --init
             git config --global --add safe.directory ./
             make build-envoy-local
+            
+            UNAME_M_OUTPUT=$(uname -m)
+            ARCH=$(case "$UNAME_M_OUTPUT" in
+                aarch64|arm64) echo "arm64";;
+                amd64|x86_64) echo "amd64";;
+                *) echo "$UNAME_M_OUTPUT";;
+            esac)
+            OUTPUT_DIR="output/linux/${ARCH}"
+            BIN_DIR="${OUTPUT_DIR}/bin"
+            CONF_DIR="${OUTPUT_DIR}/conf"
+            mkdir -p "$BIN_DIR" "$CONF_DIR"
+            cp bazel-bin/envoy "$BIN_DIR"
+            cp kuscia/conf/envoy.yaml "$CONF_DIR"
       - store_artifacts:
           path: output
 

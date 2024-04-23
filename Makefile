@@ -54,10 +54,7 @@ build-envoy:
 .PHONY: build-envoy-local
 build-envoy-local:
 	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
-	mkdir -p output/linux/${ARCH}/bin
-	mkdir -p output/linux/${ARCH}/conf
-	cp bazel-bin/envoy output/linux/${ARCH}/bin
-	cp kuscia/conf/envoy.yaml output/linux/${ARCH}/conf
+
 
 .PHONY: test-envoy
 test-envoy:
