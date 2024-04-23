@@ -55,7 +55,6 @@ build-envoy:
 build-envoy-local:
 	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
 
-
 .PHONY: test-envoy
 test-envoy:
 	@$(call start_docker)
