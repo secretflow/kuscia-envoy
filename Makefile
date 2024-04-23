@@ -71,6 +71,7 @@ test-envoy-local:
 clean:
 	$(call stop_docker)
 	rm -rf output
+	rm -rf ./build/linux
 
 .PHONY: image
 image: build-envoy
