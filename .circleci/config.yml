@@ -24,9 +24,12 @@ commands:
       - run:
           name: "make build-envoy-local"
           command: |
+            apt update 
+            apt upgrade -y 
+            apt install gcc -y
             git submodule update --init
             git config --global --add safe.directory ./
-            make build-envoy
+            make build-envoy-local
       - store_artifacts:
           path: output
 
