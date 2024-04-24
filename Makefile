@@ -8,6 +8,12 @@ COMMIT_ID = $(shell git log -1 --pretty="format:%h")
 TAG = ${KUSCIA_VERSION_TAG}-${DATETIME}-${COMMIT_ID}
 IMG ?= secretflow/kuscia-envoy:${TAG}
 
+# Get current architecture information
+UNAME_M_OUTPUT := $(shell uname -m)
+
+# To configure the ARCH variable to either arm64 or amd64 or UNAME_M_OUTPUT
+ARCH := $(if $(filter aarch64 arm64,$(UNAME_M_OUTPUT)),arm64,$(if $(filter amd64 x86_64,$(UNAME_M_OUTPUT)),amd64,$(UNAME_M_OUTPUT)))
+
 CONTAINER_NAME ?= "build-envoy"
 COMPILE_MODE ?=opt
 TARGET ?= "//:envoy"
@@ -40,14 +46,15 @@ build-envoy:
 	@$(call start_docker)
 	docker exec -it ${CONTAINER_NAME} make build-envoy-local
 	docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
-	mkdir -p output/bin
-	mkdir -p output/conf
-	docker cp ${CONTAINER_NAME}:/home/admin/dev/bazel-bin/envoy output/bin
-	docker cp ${CONTAINER_NAME}:/home/admin/dev/kuscia/conf/envoy.yaml output/conf
+
 
 .PHONY: build-envoy-local
 build-envoy-local:
 	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
+	mkdir -p output/linux/${ARCH}/bin
+	mkdir -p output/linux/${ARCH}/conf
+	cp bazel-bin/envoy output/linux/${ARCH}/bin
+	cp kuscia/conf/envoy.yaml output/linux/${ARCH}/conf
 
 .PHONY: test-envoy
 test-envoy:
@@ -64,6 +71,7 @@ test-envoy-local:
 clean:
 	$(call stop_docker)
 	rm -rf output
+
 
 .PHONY: image
 image: build-envoy
