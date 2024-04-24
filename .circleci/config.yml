@@ -26,8 +26,8 @@ commands:
           command: |
             conda config --append channels conda-forge
             conda create -n kuscia-envoy cmake ninja nasm gcc=11.4 gxx=11.4 bazel -y
-            conda activate kuscia-envoy
             git submodule update --init
+            conda activate kuscia-envoy
             git config --global --add safe.directory ./
             make build-envoy-local
       - store_artifacts:
