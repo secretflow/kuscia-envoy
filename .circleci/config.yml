@@ -13,7 +13,7 @@ executors:
     shell: /bin/bash --login -eo pipefail
   linux_aarch64_executor:
     docker:
-      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6-arm64
+      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
     resource_class: arm.2xlarge
     shell: /bin/bash --login -eo pipefail
 
@@ -49,19 +49,27 @@ jobs:
       - run:
           name: Build Docker image
           command: |
+            CIRCLETAG=$(echo ${CIRCLE_TAG} | sed 's/v//')
             docker buildx create --name kuscia-envoy --platform linux/arm64,linux/amd64 --use
-            IMG=secretflow/kuscia-envoy:latest
+            IMG=secretflow/kuscia-envoy
+            IMG_LATEST={IMG}:latest
+            IMG_TAG={IMG}:{CIRCLETAG}
+            
+            ALIYUN_IMG=secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy
+            ALIYUN_IMG_LATEST={ALIYUN_IMG}:latest
+            ALIYUN_IMG_TAG={ALIYUN_IMG}:{CIRCLETAG}
             
             #login docker
             docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
             
-            docker buildx build -t ${IMG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t ${IMG_LATEST} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t ${IMG_TAG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
             
             
             # login docker - aliyun
             docker login -u ${ALIYUN_DOCKER_USERNAME} -p ${ALIYUN_DOCKER_PASSWORD} secretflow-registry.cn-hangzhou.cr.aliyuncs.com
-            
-            docker buildx build -t secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy:latest --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t {ALIYUN_IMG_LATEST} --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t {ALIYUN_IMG_TAG} --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
 
 
 
