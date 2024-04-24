@@ -9,18 +9,17 @@ executors:
   linux_x64_executor: # declares a reusable executor
     docker:
       - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
-    resource_class: large
+    resource_class: 2xlarge
     shell: /bin/bash --login -eo pipefail
   linux_aarch64_executor:
     docker:
       - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6-arm64
-    resource_class: arm.large
+    resource_class: arm.2xlarge
     shell: /bin/bash --login -eo pipefail
 
 commands:
   build_envoy:
     steps:
-      - setup_remote_docker
       - run:
           name: "make build-envoy-local"
           command: |
@@ -31,7 +30,7 @@ commands:
           path: output
 
 jobs:
-  linux_build_envoy:
+  linux_build_envoy:x
     parameters:
       executor:
         type: string
