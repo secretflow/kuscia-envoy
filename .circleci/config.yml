@@ -24,8 +24,6 @@ commands:
       - run:
           name: "make build-envoy-local"
           command: |
-            conda config --append channels conda-forge
-            conda install cmake ninja nasm gcc=11.4 gxx=11.4 bazel -y
             git submodule update --init
             git config --global --add safe.directory ./
             make build-envoy-local
