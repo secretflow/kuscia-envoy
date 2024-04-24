@@ -8,12 +8,12 @@ version: 2.1
 executors:
   linux_x64_executor: # declares a reusable executor
     docker:
-      - image: secretflow/ubuntu-base-ci:latest
+      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
     resource_class: 2xlarge
     shell: /bin/bash --login -eo pipefail
   linux_aarch64_executor:
     docker:
-      - image: secretflow/ubuntu-base-ci:latest
+      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6-arm64
     resource_class: arm.2xlarge
     shell: /bin/bash --login -eo pipefail
 
