@@ -75,4 +75,4 @@ clean:
 
 .PHONY: image
 image: build-envoy
-	docker build -t ${IMG} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+	docker build -t ${IMG} --build-arg ARCH=${ARCH} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
