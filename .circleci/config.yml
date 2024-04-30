@@ -23,6 +23,15 @@ commands:
       - run:
           name: "make build-envoy-local"
           command: |
+            ARCH=$(uname -m)
+            GCC_VERSION=$(gcc --version)
+            echo "current gcc version: $GCC_VERSION"
+            if [[ $ARCH = "aarch64" || $ARCH == "arm64" ]]; then
+              echo "upgrade gcc version to 11 for $ARCH"
+              apt-get update
+              apt-get install gcc-11 g++-11 -y
+              update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1100 --slave /usr/bin/g++ g++ /usr/bin/g++-11
+            fi
             git submodule update --init
             git config --global --add safe.directory ./
             make build-envoy-local
