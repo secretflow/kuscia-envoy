@@ -8,12 +8,12 @@ version: 2.1
 executors:
   linux_x64_executor: # declares a reusable executor
     docker:
-      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
+      - image: envoyproxy/envoy-build-ubuntu:0ca52447572ee105a4730da5e76fe47c9c5a7c64
     resource_class: 2xlarge
     shell: /bin/bash --login -eo pipefail
   linux_aarch64_executor:
     docker:
-      - image: envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
+      - image: envoyproxy/envoy-build-ubuntu:0ca52447572ee105a4730da5e76fe47c9c5a7c64
     resource_class: arm.2xlarge
     shell: /bin/bash --login -eo pipefail
 
@@ -54,26 +54,24 @@ jobs:
             IMG=secretflow/kuscia-envoy
             IMG_LATEST={IMG}:latest
             IMG_TAG={IMG}:{CIRCLETAG}
-            
+
             ALIYUN_IMG=secretflow-registry.cn-hangzhou.cr.aliyuncs.com/secretflow/kuscia-envoy
             ALIYUN_IMG_LATEST={ALIYUN_IMG}:latest
             ALIYUN_IMG_TAG={ALIYUN_IMG}:{CIRCLETAG}
-            
+
             #login docker
             docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
-            
-            docker buildx build -t ${IMG_LATEST} --platform linux/amd64 --build-arg ARCH=amd64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${IMG_LATEST} --platform linux/arm64 --build-arg ARCH=arm64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${IMG_TAG} --platform linux/amd64 --build-arg ARCH=amd64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${IMG_TAG} --platform linux/arm64 --build-arg ARCH=arm64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push           
-            
+
+            docker buildx build -t ${IMG_LATEST} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t ${IMG_TAG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+
+
             # login docker - aliyun
             docker login -u ${ALIYUN_DOCKER_USERNAME} -p ${ALIYUN_DOCKER_PASSWORD} secretflow-registry.cn-hangzhou.cr.aliyuncs.com
-            
-            docker buildx build -t ${ALIYUN_IMG_LATEST} --platform linux/amd64 --build-arg ARCH=amd64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${ALIYUN_IMG_LATEST} --platform linux/arm64 --build-arg ARCH=arm64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${ALIYUN_IMG_TAG} --platform linux/amd64 --build-arg ARCH=amd64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${ALIYUN_IMG_TAG} --platform linux/arm64 --build-arg ARCH=arm64  -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push           
+            docker buildx build -t {ALIYUN_IMG_LATEST} --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+            docker buildx build -t {ALIYUN_IMG_TAG} --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
+
+
 
 
 # Orchestrate jobs using workflows

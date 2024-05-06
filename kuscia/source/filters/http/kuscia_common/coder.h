@@ -24,10 +24,10 @@ namespace KusciaCommon {
 
 class Decoder {
 public:
-    DecodeStatus decode(Envoy::Buffer::Instance& data, google::protobuf::Message& message);
+  DecodeStatus decode(Envoy::Buffer::Instance& data, google::protobuf::Message& message);
 
 private:
-    LengthDelimitedFrameReader frameReader_;
+  LengthDelimitedFrameReader frameReader_;
 };
 
 } // namespace KusciaCommon

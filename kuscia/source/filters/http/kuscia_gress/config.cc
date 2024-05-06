@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "kuscia/source/filters/http/kuscia_gress/config.h"
 
 #include "envoy/registry/registry.h"
@@ -26,16 +25,14 @@ namespace KusciaGress {
 
 Http::FilterFactoryCb GressConfigFactory::createFilterFactoryFromProtoTyped(
     const envoy::extensions::filters::http::kuscia_gress::v3::Gress& proto_config,
-    const std::string&,
-    Server::Configuration::FactoryContext&) {
-    GressFilterConfigSharedPtr config = std::make_shared<GressFilterConfig>(proto_config);
-    return [config](Http::FilterChainFactoryCallbacks & callbacks) -> void {
-        callbacks.addStreamFilter(std::make_shared<KusciaGress::GressFilter>(config));
-    };
+    const std::string&, Server::Configuration::FactoryContext&) {
+  GressFilterConfigSharedPtr config = std::make_shared<GressFilterConfig>(proto_config);
+  return [config](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+    callbacks.addStreamFilter(std::make_shared<KusciaGress::GressFilter>(config));
+  };
 }
 
-REGISTER_FACTORY(GressConfigFactory,
-                 Server::Configuration::NamedHttpFilterConfigFactory);
+REGISTER_FACTORY(GressConfigFactory, Server::Configuration::NamedHttpFilterConfigFactory);
 
 } // namespace KusciaGress
 } // namespace HttpFilters

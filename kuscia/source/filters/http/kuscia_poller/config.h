@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #pragma once
 
 #include <string>
@@ -27,14 +26,14 @@ namespace Extensions {
 namespace HttpFilters {
 namespace KusciaPoller {
 
-class PollerConfigFactory : public Extensions::HttpFilters::Common::FactoryBase<envoy::extensions::filters::http::kuscia_poller::v3::Poller> {
-  public:
-    PollerConfigFactory() : FactoryBase("envoy.filters.http.kuscia_poller") {}
+class PollerConfigFactory : public Extensions::HttpFilters::Common::FactoryBase<
+                                envoy::extensions::filters::http::kuscia_poller::v3::Poller> {
+public:
+  PollerConfigFactory() : FactoryBase("envoy.filters.http.kuscia_poller") {}
 
-    Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
-        const envoy::extensions::filters::http::kuscia_poller::v3::Poller&,
-        const std::string&,
-        Server::Configuration::FactoryContext&) override;
+  Http::FilterFactoryCb createFilterFactoryFromProtoTyped(
+      const envoy::extensions::filters::http::kuscia_poller::v3::Poller&, const std::string&,
+      Server::Configuration::FactoryContext&) override;
 };
 
 } // namespace KusciaPoller

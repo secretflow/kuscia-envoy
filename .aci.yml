@@ -1,0 +1,104 @@
+# OPENSOURCE-CLEANUP DELETE_FILE
+# ACI 语法文档：https://yuque.antfin-inc.com/antci/help/syntax-plugins
+
+version: "1.5"
+
+git:
+  depth: 200
+
+stages:
+#- PreRequisites
+#- EnvPrepare
+  - Build
+  - Delivery
+
+parameters:
+  BUILD_IMAGE: "reg.docker.alibaba-inc.com/nueva-stack/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6"
+  KUSCIA_ENVOY_REPO_URL: "git@code.alipay.com:secretflow/kuscia-envoy.git"
+
+only:
+  triggerType:
+    - pullRequest # 创建PR及向PR分支push代码时触发
+    - tagPush
+    - push
+  triggerBranch: # 设置触发分支
+    pushOriginalBranch: # 只有向以下分支提交push才会触发
+      - master
+      - release/*
+      - codereview/*
+  targetBranch: #只有向master分支提交pullRequest时才触发pipeline执行
+    - master
+    - release/*
+    - codereview/*
+
+agent:
+  docker:
+    image: ${BUILD_IMAGE}
+    resourceRequirements: # 2c4g20g的配置 cpu/memory/ephemeral-storage取值均为整型
+      cpu: 4 # 最大值16
+      memory: 8 # 最大值32
+      ephemeral-storage: 10 # 最大值100
+
+CMD-FLAKE8:
+  stage: PreRequisites
+  plugin: CMD
+  pluginConfig:
+    encoding: UTF-8 # 编码设置
+    excludes: # 排除哪些项不进行代码扫描
+      - "**/*_pb.go" # generated files for protocol buffer
+  checkRule:
+    - blocker = 0
+    - critical = 0
+    - major = 0
+
+variableExport:
+  stage: EnvPrepare
+  script:
+    - |
+      cd ${WORKSPACE}
+      export BUILD_DATE="$(date +'%Y%m%d-%H%M%S')"
+  variables:
+    - BUILD_DATE
+
+build-envoy:
+  stage: Build
+  plugin: ANT-BUILD
+  pluginConfig:
+    image: ${BUILD_IMAGE}
+    script:
+      - |
+        set -ex
+        # Note: git clone requires answer 'yes'
+        ssh-keyscan -t rsa gitlab.alipay-inc.com >> ~/.ssh/known_hosts
+
+        cd $ANTBUILD_WORKSPACE
+        ls -l
+        whoami && cat /proc/cpuinfo | grep process | wc -l && cat /proc/meminfo | grep MemTotal && df -h
+
+        git submodule update --init
+        ls envoy
+        # .aci.yaml 开头的 depth 配置没有生效，aci 流水线写死 depth=5，这边强制修改 depth==200
+        git config --global --add safe.directory ./
+
+        bazel build //:envoy --verbose_failures
+        mkdir -p build_apps
+        mv bazel-bin/envoy build_apps
+    afterScript:
+      - ls
+    outputs:
+      - name: "kuscia-envoy"
+        desc: "kuscia envoy package"
+        type: custom
+        paths:
+          - build_app
+  only:
+    triggerType:
+      - push
+      - tagPush
+      - pullRequest
+    triggerBranch: # 设置触发分支
+      pushOriginalBranch: # 只有向以下分支提交push才会触发
+        - master
+        - release/*
+    targetBranch: #只有向master分支提交pullRequest时才触发pipeline执行
+      - release/*

@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <vector>
 #include "source/common/buffer/buffer_impl.h"
 #include "source/common/common/logger.h"
+#include <vector>
 
 namespace Envoy {
 namespace Extensions {
@@ -24,34 +24,34 @@ namespace HttpFilters {
 namespace KusciaCommon {
 
 enum class DecodeStatus {
-    Ok,
-    NeedMoreData,
-    ErrorObjectTooLarge,
-    ErrorInvalidData,
+  Ok,
+  NeedMoreData,
+  ErrorObjectTooLarge,
+  ErrorInvalidData,
 };
 
-extern absl::string_view  decodeStatusString(DecodeStatus status);
+extern absl::string_view decodeStatusString(DecodeStatus status);
 
 class LengthDelimitedFrameReader : public Logger::Loggable<Logger::Id::http> {
 public:
-    LengthDelimitedFrameReader() : remaining_(0), maxBytes_(16 * 1024 * 1024) {}
+  LengthDelimitedFrameReader() : remaining_(0), maxBytes_(16 * 1024 * 1024) {}
 
-    DecodeStatus read(Buffer::Instance& input);
+  DecodeStatus read(Buffer::Instance& input);
 
-    const std::vector<uint8_t>& getDataFrame() const { return data_frame_; };
+  const std::vector<uint8_t>& getDataFrame() const { return data_frame_; };
 
 private:
-    bool readByLen(Buffer::Instance& input, size_t len, std::vector<uint8_t>& frame);
+  bool readByLen(Buffer::Instance& input, size_t len, std::vector<uint8_t>& frame);
 
-    size_t remaining_;
-    const size_t maxBytes_;
-    std::vector<uint8_t> len_frame_;
-    std::vector<uint8_t> data_frame_;
+  size_t remaining_;
+  const size_t maxBytes_;
+  std::vector<uint8_t> len_frame_;
+  std::vector<uint8_t> data_frame_;
 };
 
 class LengthDelimitedFrameWriter {
 public:
-    void write(const char data[], uint32_t size, Buffer::OwnedImpl& output);
+  void write(const char data[], uint32_t size, Buffer::OwnedImpl& output);
 };
 
 } // namespace KusciaCommon
