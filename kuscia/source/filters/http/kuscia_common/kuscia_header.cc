@@ -22,20 +22,38 @@ namespace KusciaCommon {
 constexpr absl::string_view InterConnProtocolBFIA{"bfia"};
 constexpr absl::string_view InterConnProtocolKuscia{"kuscia"};
 
-absl::optional<absl::string_view>
-KusciaHeader::getSource(const Http::RequestHeaderMap &headers) {
-  auto kusciaSource = headers.getByKey(HeaderKeyKusciaSource);
-  if (kusciaSource) {
-    return kusciaSource;
+absl::optional<absl::string_view> KusciaHeader::getSource(const Http::RequestHeaderMap& headers) {
+  absl::string_view kusciaSource;
+  auto source = headers.get(HeaderKeyKusciaSource);
+  if (!source.empty()) {
+    return source[0]->value().getStringView();
   }
   // BFIA protocol
-  auto protocol = headers.getByKey(KusciaCommon::HeaderKeyInterConnProtocol);
-  if (protocol && protocol.value() == InterConnProtocolBFIA) {
-    auto ptpSource = headers.getByKey(HeaderKeyBFIAPTPSource);
-    return ptpSource ? ptpSource
-                     : headers.getByKey(HeaderKeyBFIAScheduleSource);
+  auto protocol = headers.get(KusciaCommon::HeaderKeyInterConnProtocol);
+  if (!protocol.empty() && std::string(protocol[0]->value().getStringView()) == InterConnProtocolBFIA) {
+    auto ptpSource = headers.get(HeaderKeyBFIAPTPSource);
+    if (!ptpSource.empty()) {
+        return ptpSource[0]->value().getStringView();
+    }
+
+    auto scheduleSource = headers.get(HeaderKeyBFIAScheduleSource);
+    if (!scheduleSource.empty()) {
+        return scheduleSource[0]->value().getStringView();
+    }
   }
   return kusciaSource;
+}
+
+void adjustContentLength(Http::RequestOrResponseHeaderMap& headers, int64_t delta_length) {
+  auto length_header = headers.getContentLengthValue();
+  if (!length_header.empty()) {
+    int64_t old_length;
+    if (absl::SimpleAtoi(length_header, &old_length)) {
+      if (old_length > 0 && old_length + delta_length >= 0) {
+        headers.setContentLength(old_length + delta_length);
+      }
+    }
+  }
 }
 
 } // namespace KusciaCommon

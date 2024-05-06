@@ -19,20 +19,20 @@ namespace Extensions {
 namespace HttpFilters {
 namespace KusciaCommon {
 
-DecodeStatus KusciaCommon::Decoder::decode(Envoy::Buffer::Instance& data, google::protobuf::Message &message)
-{
-    DecodeStatus status = frameReader_.read(data);
-    if (status != DecodeStatus::Ok) {
-        return status;
-    }
+DecodeStatus KusciaCommon::Decoder::decode(Envoy::Buffer::Instance& data,
+                                           google::protobuf::Message& message) {
+  DecodeStatus status = frameReader_.read(data);
+  if (status != DecodeStatus::Ok) {
+    return status;
+  }
 
-    auto data_frame = frameReader_.getDataFrame();
+  auto data_frame = frameReader_.getDataFrame();
 
-    if (!message.ParseFromArray(data_frame.data(), data_frame.size())) {
-        return DecodeStatus::ErrorInvalidData;
-    }
+  if (!message.ParseFromArray(data_frame.data(), data_frame.size())) {
+    return DecodeStatus::ErrorInvalidData;
+  }
 
-    return DecodeStatus::Ok;
+  return DecodeStatus::Ok;
 }
 
 } // namespace KusciaCommon

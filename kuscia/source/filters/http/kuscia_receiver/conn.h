@@ -155,7 +155,7 @@ public:
     }
 
     BufferPtr buffer;
-    if (data.body().size() > 0) {
+    if (data.body().size() > 0 || !headers) {
       buffer = std::make_shared<Buffer::OwnedImpl>();
       buffer->add(data.body());
     }
@@ -173,10 +173,11 @@ public:
       }
     });
 
-    ENVOY_LOG(
-        trace,
-        "[TcpConn] [C{}][S{}] write response, status_code {} end_stream {} is_chunked {} index {}",
-        conn_id_, stream_id_, status_code, end_stream, is_chunked, index);
+    ENVOY_LOG(trace,
+              "[TcpConn] [C{}][S{}] write response, status_code {} end_stream {} is_chunked {} "
+              "index {} body size {}",
+              conn_id_, stream_id_, status_code, end_stream, is_chunked, index,
+              data.body().size());
 
     return end_stream;
   }

@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
+BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:0ca52447572ee105a4730da5e76fe47c9c5a7c64
 
 # Image URL to use all building image targets
 DATETIME = $(shell date +"%Y%m%d%H%M%S")
@@ -14,7 +14,7 @@ UNAME_M_OUTPUT := $(shell uname -m)
 # To configure the ARCH variable to either arm64 or amd64 or UNAME_M_OUTPUT
 ARCH := $(if $(filter aarch64 arm64,$(UNAME_M_OUTPUT)),arm64,$(if $(filter amd64 x86_64,$(UNAME_M_OUTPUT)),amd64,$(UNAME_M_OUTPUT)))
 
-CONTAINER_NAME ?= "build-envoy"
+CONTAINER_NAME ?= "build-envoy-$(shell echo ${USER})"
 COMPILE_MODE ?=opt
 TARGET ?= "//:envoy"
 BUILD_OPTS ?="--strip=always"
@@ -28,7 +28,7 @@ define start_docker
 		git submodule update --init;\
 	fi;
 	if [[ ! -n $$(docker ps -q -f "name=^$(CONTAINER_NAME)$$") ]]; then\
-		docker run -itd --rm -v $(shell pwd):/home/admin/dev -v $(shell pwd)/cache:/root/.cache/bazel -w /home/admin/dev --name $(CONTAINER_NAME) \
+		docker run -itd --rm -v $(shell pwd)/cache:/root/.cache/bazel -v $(shell pwd):/home/admin/dev -w /home/admin/dev --name $(CONTAINER_NAME) \
 		-e GOPROXY='https://goproxy.cn,direct' --cap-add=NET_ADMIN $(BUILD_IMAGE);\
 		docker exec -it $(CONTAINER_NAME) /bin/bash -c 'git config --global --add safe.directory /home/admin/dev';\
 	fi;
@@ -72,7 +72,6 @@ clean:
 	$(call stop_docker)
 	rm -rf output
 
-
 .PHONY: image
 image: build-envoy
-	docker build -t ${IMG} --build-arg ARCH=${ARCH} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .
+	docker build -t ${IMG} -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile .

@@ -14,15 +14,15 @@
 
 #pragma once
 
-#include "kuscia/source/filters/http/kuscia_common/coder.h"
-#include "kuscia/source/filters/http/kuscia_poller/common.h"
-#include "source/common/common/logger.h"
+#include "envoy/common/time.h"
+#include "envoy/event/timer.h"
 #include "envoy/http/filter.h"
 #include "envoy/upstream/cluster_manager.h"
-#include "source/extensions/filters/http/common/pass_through_filter.h"
+#include "kuscia/source/filters/http/kuscia_common/coder.h"
 #include "kuscia/source/filters/http/kuscia_poller/callbacks.h"
-#include "envoy/event/timer.h"
-#include "envoy/common/time.h"
+#include "kuscia/source/filters/http/kuscia_poller/common.h"
+#include "source/common/common/logger.h"
+#include "source/extensions/filters/http/common/pass_through_filter.h"
 #include <map>
 #include <vector>
 
@@ -33,46 +33,52 @@ namespace KusciaPoller {
 
 class PollerFilter : public Http::PassThroughFilter, public Logger::Loggable<Logger::Id::http> {
 public:
-    explicit PollerFilter(const PollerConfigPbConfig& config, Upstream::ClusterManager& cluster_manager, TimeSource& time_source);
-    ~PollerFilter();
+  explicit PollerFilter(const PollerConfigPbConfig& config,
+                        Upstream::ClusterManager& cluster_manager, TimeSource& time_source);
+  ~PollerFilter();
 
-    Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap& headers, bool) override;
+  Http::FilterHeadersStatus decodeHeaders(Http::RequestHeaderMap& headers, bool) override;
 
-    // Http::FilterDataStatus decodeData(Buffer::Instance& data, bool end_stream) override;
+  // Http::FilterDataStatus decodeData(Buffer::Instance& data, bool end_stream) override;
 
-    Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap& headers, bool end_stream) override;
+  Http::FilterHeadersStatus encodeHeaders(Http::ResponseHeaderMap& headers,
+                                          bool end_stream) override;
 
-    Http::FilterDataStatus encodeData(Buffer::Instance& data, bool end_stream) override;
+  Http::FilterDataStatus encodeData(Buffer::Instance& data, bool end_stream) override;
 
 private:
-    bool attemptToDecodeMessage(Buffer::Instance& data);
+  bool attemptToDecodeMessage(Buffer::Instance& data);
 
-    int32_t forwardMessage(const RequestMessagePb &message, std::string& errmsg);
-    int32_t forwardToApplication(Http::AsyncClient& client, Http::RequestMessagePtr& req_msg, const std::string& msg_id, std::string& errmsg);
-    int32_t forwardToApiserver(Http::AsyncClient& client, Http::RequestMessagePtr& req_msg, const std::string& msg_id, std::string& errmsg);
+  int32_t forwardMessage(const RequestMessagePb& message, std::string& errmsg);
+  int32_t forwardToApplication(Http::AsyncClient& client, const std::string& req_host,
+                               Http::RequestMessagePtr& req_msg, const std::string& msg_id,
+                               std::string& errmsg);
+  int32_t forwardToApiserver(Http::AsyncClient& client, const std::string& req_host,
+                             Http::RequestMessagePtr& req_msg, const std::string& msg_id,
+                             std::string& errmsg);
 
-    void appendHeaders(Http::RequestHeaderMap& headers);
-    void sendHeartbeat();
+  void appendHeaders(Http::RequestHeaderMap& headers);
+  void sendHeartbeat();
 
-    bool forward_response_{false};
-    std::string conn_id_;
-    std::string peer_domain_;
-    std::string receiver_service_name_;
-    std::string peer_receiver_host_;
-    int req_timeout_;
-    int rsp_timeout_;
-    int heartbeat_interval_;
-    Upstream::ClusterManager& cluster_manager_;
-    KusciaCommon::Decoder decoder_;
+  bool forward_response_{false};
+  std::string conn_id_;
+  std::string peer_domain_;
+  std::string receiver_service_name_;
+  std::string peer_receiver_host_;
+  int req_timeout_;
+  int rsp_timeout_;
+  int heartbeat_interval_;
+  Upstream::ClusterManager& cluster_manager_;
+  KusciaCommon::Decoder decoder_;
 
-    std::map<std::string, std::vector<std::pair<std::string, std::string>>, std::less<>> append_headers_;
+  std::map<std::string, std::vector<std::pair<std::string, std::string>>, std::less<>>
+      append_headers_;
 
-    Http::RequestHeaderMapPtr headers_;
+  Http::RequestHeaderMapPtr headers_;
 
-    Event::TimerPtr response_timer_;
-    TimeSource& time_source_;
+  Event::TimerPtr response_timer_;
+  TimeSource& time_source_;
 };
-
 
 } // namespace KusciaPoller
 } // namespace HttpFilters

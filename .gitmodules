@@ -1,4 +1,4 @@
 [submodule "envoy"]
 	path = envoy
 	url = https://github.com/envoyproxy/envoy.git
-	branch = release/v1.20
+	branch = release/v1.29

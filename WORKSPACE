@@ -17,9 +17,10 @@ load("@envoy//bazel:repositories.bzl", "envoy_dependencies")
 
 envoy_dependencies()
 
+#https://github.com/envoyproxy/envoy/issues/28670
 load("@envoy//bazel:repositories_extra.bzl", "envoy_dependencies_extra")
 
-envoy_dependencies_extra()
+envoy_dependencies_extra(ignore_root_user_error = True)
 
 load("@envoy//bazel:python_dependencies.bzl", "envoy_python_dependencies")
 

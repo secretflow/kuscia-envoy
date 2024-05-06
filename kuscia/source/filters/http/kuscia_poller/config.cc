@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "kuscia/source/filters/http/kuscia_poller/config.h"
 
 #include "envoy/registry/registry.h"
@@ -26,12 +25,12 @@ namespace KusciaPoller {
 
 Http::FilterFactoryCb PollerConfigFactory::createFilterFactoryFromProtoTyped(
     const envoy::extensions::filters::http::kuscia_poller::v3::Poller& proto_config,
-    const std::string&,
-    Server::Configuration::FactoryContext& context) {
+    const std::string&, Server::Configuration::FactoryContext& context) {
 
-    return [proto_config, &context](Http::FilterChainFactoryCallbacks& callbacks) -> void {
-        callbacks.addStreamFilter(std::make_shared<PollerFilter>(proto_config, context.clusterManager(), context.timeSource()));
-    };
+  return [proto_config, &context](Http::FilterChainFactoryCallbacks& callbacks) -> void {
+    callbacks.addStreamFilter(std::make_shared<PollerFilter>(
+        proto_config, context.serverFactoryContext().clusterManager(), context.serverFactoryContext().timeSource()));
+  };
 }
 
 REGISTER_FACTORY(PollerConfigFactory, Server::Configuration::NamedHttpFilterConfigFactory);
