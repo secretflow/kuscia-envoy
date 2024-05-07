@@ -75,6 +75,7 @@ private:
   bool isPollRequest(Http::RequestHeaderMap& headers);
   bool isForwardRequest(Http::RequestHeaderMap& headers);
   bool isForwardResponse(Http::RequestHeaderMap& headers);
+  bool isPassthroughTraffic(Http::RequestHeaderMap& headers);
 
   void postEvent();
   void replyDirectly(Http::Code code);

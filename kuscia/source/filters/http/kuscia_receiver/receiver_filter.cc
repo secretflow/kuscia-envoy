@@ -49,9 +49,12 @@ static void setReqHeader(RequestMessagePb& pb, Http::RequestHeaderMap& headers) 
   pb.set_path(std::string(headers.getPathValue()));
   pb.set_method(std::string(headers.getMethodValue()));
   auto hs = pb.mutable_headers();
-  headers.forEach([&](absl::string_view key, absl::string_view value) -> bool {
-    (*hs)[std::string(key)] = std::string(value);
-    return true;
+
+  headers.iterate([&hs](const Http::HeaderEntry& e) -> Http::HeaderMap::Iterate {
+    auto key = std::string(e.key().getStringView());
+    auto value = std::string(e.value().getStringView());
+    (*hs)[key] = value;
+    return Envoy::Http::HeaderMap::Iterate::Continue;
   });
 }
 
@@ -69,6 +72,14 @@ Http::FilterHeadersStatus ReceiverFilter::decodeHeaders(Http::RequestHeaderMap& 
   // chunked encoding is not supported
   if (decoder_callbacks_->streamInfo().protocol() != Http::Protocol::Http11) {
     return Http::FilterHeadersStatus::Continue;
+  }
+  if (isPassthroughTraffic(headers)) {
+    ENVOY_LOG(info, "host {} path {} method {} is passthrough traffic", headers.getHostValue(),
+              headers.getPathValue(), headers.getMethodValue());
+    return Http::FilterHeadersStatus::Continue;
+  } else {
+    ENVOY_LOG(info, "host {} path {} method {} is kuscia traffic", headers.getHostValue(),
+              headers.getPathValue(), headers.getMethodValue());
   }
   if (isPollRequest(headers) || isForwardRequest(headers) || isForwardResponse(headers)) {
     if (event_type_ == ReceiverEventType::RECEIVER_EVENT_TYPE_DATA_SEND) {
@@ -124,37 +135,43 @@ void ReceiverFilter::onDestroy() {
   }
 }
 
+bool ReceiverFilter::isPassthroughTraffic(Http::RequestHeaderMap& headers) {
+  return headers.get(KusciaCommon::HeaderTransitFlag).empty();
+}
+
 // poll request check
 // receiver.${peer}.svc/poll?timeout=xxx&service=xxx
 bool ReceiverFilter::isPollRequest(Http::RequestHeaderMap& headers) {
-  auto path = headers.getPathValue();
   auto host = headers.getHostValue();
-  auto source = headers.getByKey(KusciaCommon::HeaderKeyOriginSource).value_or(nullptr);
-  if (source == nullptr || host == nullptr || path == nullptr) {
+  auto path = headers.getPathValue();
+  auto sourceValue = headers.get(KusciaCommon::HeaderKeyOriginSource);
+  if (host.empty() || path.empty() || sourceValue.empty() || sourceValue[0]->value().empty()) {
     return false;
   }
+  absl::string_view source = sourceValue[0]->value().getStringView();
+
   std::string group;
   if (!re2::RE2::PartialMatch(std::string(host), KusciaCommon::PollHostPattern, &group) ||
       !absl::StartsWith(path, KusciaCommon::PollPathPrefix) || group != config_->selfNamespace()) {
     return false;
   }
-  auto query_params = Http::Utility::parseQueryString(path);
-  auto svc = query_params.find(KusciaCommon::ServiceParamKey);
-  if (svc == query_params.end() && svc->second.empty()) {
+  auto query_params = Http::Utility::QueryParamsMulti::parseQueryString(path);
+  auto svc = query_params.getFirstValue(KusciaCommon::ServiceParamKey);
+  if (!svc.has_value()) {
     return false;
   }
   event_type_ = ReceiverEventType::RECEIVER_EVENT_TYPE_CONNECT;
   rule_ = std::make_shared<ReceiverRule>();
   rule_->set_source(group);
   rule_->set_destination(std::string(source));
-  rule_->set_service(std::string(svc->second));
+  rule_->set_service(svc.value());
   conn_uuid_ = random_.uuid();
 
-  auto timeout = query_params.find(KusciaCommon::TimeoutParamKey);
-  if (timeout != query_params.end() && !timeout->second.empty()) {
-    timeout_sec_ = timeout2sec(timeout->second);
+  auto timeout = query_params.getFirstValue(KusciaCommon::TimeoutParamKey);
+  if (timeout.has_value()) {
+    timeout_sec_ = timeout2sec(timeout.value());
     ENVOY_LOG(info, "[ReceiverFilter] poll request from {} to {} service {} timeout {}", group,
-              source, svc->second, timeout->second);
+              source, svc.value(), timeout.value());
   }
   return true;
 }
@@ -162,15 +179,25 @@ bool ReceiverFilter::isPollRequest(Http::RequestHeaderMap& headers) {
 // dst = ${svc}.dest-namespace.svc
 // src = src-namespace
 bool ReceiverFilter::isForwardRequest(Http::RequestHeaderMap& headers) {
-  auto source = headers.getByKey(KusciaCommon::HeaderKeyOriginSource).value_or(nullptr);
-  auto host = headers.getHostValue();
+  auto sourceHeader = headers.get(KusciaCommon::HeaderKeyOriginSource);
+  if (sourceHeader.empty()) {
+    return false;
+  }
+  absl::string_view source = sourceHeader[0]->value().getStringView();
+
+  absl::string_view host;
+  auto hostValue = headers.getHostValue();
   // rewrite
   bool rewrite = false;
-  if (absl::StartsWith(host, KusciaCommon::InternalClusterHost)) {
-    host = headers.getByKey(KusciaCommon::HeaderKeyKusciaHost).value_or(nullptr);
+  if (absl::StartsWith(hostValue, KusciaCommon::InternalClusterHost)) {
+    auto kusciaHost = headers.get(KusciaCommon::HeaderKeyKusciaHost);
+    if (!kusciaHost.empty()) {
+      host = kusciaHost[0]->value().getStringView();
+    }
     rewrite = true;
   }
-  if (source != config_->selfNamespace() || host == nullptr) {
+
+  if (std::string(source) != config_->selfNamespace() || host.empty()) {
     return false;
   }
   std::vector<absl::string_view> fields = absl::StrSplit(host, ".");
@@ -196,7 +223,7 @@ bool ReceiverFilter::isForwardRequest(Http::RequestHeaderMap& headers) {
 bool ReceiverFilter::isForwardResponse(Http::RequestHeaderMap& headers) {
   auto path = headers.getPathValue();
   auto host = headers.getHostValue();
-  if (!absl::StartsWith(path, KusciaCommon::ReplyPathPrefix) || host == nullptr) {
+  if (!absl::StartsWith(path, KusciaCommon::ReplyPathPrefix) || host.empty()) {
     return false;
   }
   std::vector<absl::string_view> fields = absl::StrSplit(host, ".");
@@ -206,13 +233,13 @@ bool ReceiverFilter::isForwardResponse(Http::RequestHeaderMap& headers) {
   if (fields[1] != config_->selfNamespace()) {
     return false;
   }
-  auto query_params = Http::Utility::parseQueryString(path);
-  auto request_id = query_params.find(KusciaCommon::RequestIdParamKey);
-  if (request_id == query_params.end() || request_id->second.empty()) {
+  auto query_params = Http::Utility::QueryParamsMulti::parseQueryString(path);
+  auto request_id = query_params.getFirstValue(KusciaCommon::RequestIdParamKey);
+  if (!request_id.has_value()) {
     return false;
   }
   event_type_ = ReceiverEventType::RECEIVER_EVENT_TYPE_DATA_RECV;
-  request_id_ = request_id->second;
+  request_id_ = request_id.value();
   ENVOY_LOG(trace, "[ReceiverFilter] forward response request_id {}", request_id_);
   return true;
 }
