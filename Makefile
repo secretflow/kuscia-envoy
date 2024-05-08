@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:81a93046060dbe5620d5b3aa92632090a9ee4da6
+BUILD_IMAGE = envoyproxy/envoy-build-ubuntu:7304f974de2724617b7492ccb4c9c58cd420353a
 
 # Image URL to use all building image targets
 DATETIME = $(shell date +"%Y%m%d%H%M%S")
@@ -7,6 +7,12 @@ KUSCIA_VERSION_TAG = $(shell git describe --abbrev=7 --always)
 COMMIT_ID = $(shell git log -1 --pretty="format:%h")
 TAG = ${KUSCIA_VERSION_TAG}-${DATETIME}-${COMMIT_ID}
 IMG ?= secretflow/kuscia-envoy:${TAG}
+
+# Get current architecture information
+UNAME_M_OUTPUT := $(shell uname -m)
+
+# To configure the ARCH variable to either arm64 or amd64 or UNAME_M_OUTPUT
+ARCH := $(if $(filter aarch64 arm64,$(UNAME_M_OUTPUT)),arm64,$(if $(filter amd64 x86_64,$(UNAME_M_OUTPUT)),amd64,$(UNAME_M_OUTPUT)))
 
 CONTAINER_NAME ?= "build-envoy-$(shell echo ${USER})"
 COMPILE_MODE ?=opt
@@ -17,6 +23,8 @@ TEST_COMPILE_MODE = fastbuild
 TEST_TARGET ?= "//kuscia/test/..."
 TEST_LOG_LEVEL = debug
 
+GCC_VERSION := $(shell docker exec -it $(CONTAINER_NAME) /bin/bash -c 'gcc --version | grep gcc | head -n 1 | cut -d" " -f4')
+
 define start_docker
 	if [ ! -f  "./envoy/BUILD" ]; then\
 		git submodule update --init;\
@@ -26,7 +34,13 @@ define start_docker
 		-e GOPROXY='https://goproxy.cn,direct' --cap-add=NET_ADMIN $(BUILD_IMAGE);\
 		docker exec -it $(CONTAINER_NAME) /bin/bash -c 'git config --global --add safe.directory /home/admin/dev';\
 	fi;
-
+	echo "GCC_VERSION: $(GCC_VERSION)";\
+	if [[ ($(ARCH) == "aarch64" || $(ARCH) == "arm64") && $(GCC_VERSION) == "9.4.0" ]]; then\
+		echo "ARCH: $(ARCH) - Install gcc-11 g++-11";\
+		docker exec $(CONTAINER_NAME) /bin/bash -c 'apt update';\
+		docker exec $(CONTAINER_NAME) /bin/bash -c 'apt install -y gcc-11 g++-11';\
+		docker exec $(CONTAINER_NAME) /bin/bash -c 'rm /usr/bin/g++ /usr/bin/gcc && ln -s /usr/bin/g++-11 /usr/bin/g++ && ln -s /usr/bin/gcc-11 /usr/bin/gcc';\
+	fi;
 endef
 
 define stop_docker
@@ -40,14 +54,15 @@ build-envoy:
 	@$(call start_docker)
 	docker exec -it ${CONTAINER_NAME} make build-envoy-local
 	docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
-	mkdir -p output/bin
-	mkdir -p output/conf
-	docker cp ${CONTAINER_NAME}:/home/admin/dev/bazel-bin/envoy output/bin
-	docker cp ${CONTAINER_NAME}:/home/admin/dev/kuscia/conf/envoy.yaml output/conf
+
 
 .PHONY: build-envoy-local
 build-envoy-local:
 	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
+	mkdir -p output/linux/${ARCH}/bin
+	mkdir -p output/linux/${ARCH}/conf
+	cp bazel-bin/envoy output/linux/${ARCH}/bin
+	cp kuscia/conf/envoy.yaml output/linux/${ARCH}/conf
 
 .PHONY: test-envoy
 test-envoy:
