@@ -46,7 +46,7 @@ commands:
   envoy_test:
     steps:
       - run:
-          name: "make build-envoy-local"
+          name: "make test-envoy-local"
           command: |
             ARCH=$(uname -m)
             git config --global --add safe.directory ./
