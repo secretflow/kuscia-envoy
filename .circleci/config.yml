@@ -131,7 +131,6 @@ workflows:
             branches:
               only:
                 - /pull\/.*/
-                - *
             tags:
               ignore: /.*/
   build-workflow:
@@ -153,7 +152,6 @@ workflows:
             branches:
               only:
                 - /pull\/.*/
-                - *
             tags:
               ignore: /.*/
       - docker_image_publish:
