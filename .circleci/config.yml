@@ -43,7 +43,7 @@ commands:
             make build-envoy-local
       - store_artifacts:
           path: output
-    test:
+    envoy_test:
       steps:
         - run:
             name: "make build-envoy-local"
@@ -81,7 +81,7 @@ jobs:
     steps:
       - checkout
       - go_env
-      - build_envoy
+      - envoy_test
   docker_image_publish:
     docker:
       - image: cimg/deploy:2023.06.1
@@ -135,7 +135,7 @@ workflows:
               ignore: /.*/
   build-workflow:
     jobs:
-      - linux_test:
+      - linux_envoy_test:
           matrix:
             parameters:
               executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
@@ -150,10 +150,9 @@ workflows:
               executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
           filters:
             branches:
-              only:
-                - /pull\/.*/
-            tags:
               ignore: /.*/
+            tags:
+              only: /^v.*/
       - docker_image_publish:
           requires:
             - linux_build_envoy
