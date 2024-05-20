@@ -128,9 +128,6 @@ workflows:
             parameters:
               executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
           filters:
-            branches:
-              only:
-                - /pull\/.*/
             tags:
               ignore: /.*/
   build-workflow:
