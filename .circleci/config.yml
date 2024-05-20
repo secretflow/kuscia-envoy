@@ -43,24 +43,24 @@ commands:
             make build-envoy-local
       - store_artifacts:
           path: output
-    envoy_test:
-      steps:
-        - run:
-            name: "make build-envoy-local"
-            command: |
-              ARCH=$(uname -m)
+  envoy_test:
+    steps:
+      - run:
+          name: "make build-envoy-local"
+          command: |
+            ARCH=$(uname -m)
 
-              if [ "$ARCH" == "aarch64" ]; then
-              set +e
-              apt-get update  -y
-              apt-get install  g++-11 cmake nasm ninja-build -y
-              update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1100
-              update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 1100
-              set -e
-              fi
-              git config --global --add safe.directory ./
-              git submodule update --init
-              make test-envoy-local
+            if [ "$ARCH" == "aarch64" ]; then
+            set +e
+            apt-get update  -y
+            apt-get install  g++-11 cmake nasm ninja-build -y
+            update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1100
+            update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 1100
+            set -e
+            fi
+            git config --global --add safe.directory ./
+            git submodule update --init
+            make test-envoy-local
 
 
 jobs:
