@@ -61,16 +61,9 @@ jobs:
 
             #login docker
             docker login -u ${DOCKER_USERNAME} -p ${DOCKER_DEPLOY_TOKEN}
-            
             docker buildx build -t ${IMG_LATEST} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
             docker buildx build -t ${IMG_TAG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
             
-            
-
-            docker buildx build -t ${IMG_LATEST} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-            docker buildx build -t ${IMG_TAG} --platform linux/arm64,linux/amd64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
-
-
             # login docker - aliyun
             docker login -u ${ALIYUN_DOCKER_USERNAME} -p ${ALIYUN_DOCKER_PASSWORD} secretflow-registry.cn-hangzhou.cr.aliyuncs.com
             docker buildx build -t {ALIYUN_IMG_LATEST} --platform linux/amd64,linux/arm64 -f ./build_image/dockerfile/kuscia-envoy-anolis.Dockerfile . --push
