@@ -74,11 +74,11 @@ Http::FilterHeadersStatus ReceiverFilter::decodeHeaders(Http::RequestHeaderMap& 
     return Http::FilterHeadersStatus::Continue;
   }
   if (isPassthroughTraffic(headers)) {
-    ENVOY_LOG(info, "host {} path {} method {} is passthrough traffic", headers.getHostValue(),
+    ENVOY_LOG(trace, "host {} path {} method {} is passthrough traffic", headers.getHostValue(),
               headers.getPathValue(), headers.getMethodValue());
     return Http::FilterHeadersStatus::Continue;
   } else {
-    ENVOY_LOG(info, "host {} path {} method {} is kuscia traffic", headers.getHostValue(),
+    ENVOY_LOG(trace, "host {} path {} method {} is kuscia traffic", headers.getHostValue(),
               headers.getPathValue(), headers.getMethodValue());
   }
   if (isPollRequest(headers) || isForwardRequest(headers) || isForwardResponse(headers)) {
@@ -184,12 +184,10 @@ bool ReceiverFilter::isForwardRequest(Http::RequestHeaderMap& headers) {
     return false;
   }
   absl::string_view source = sourceHeader[0]->value().getStringView();
-
-  absl::string_view host;
-  auto hostValue = headers.getHostValue();
+  absl::string_view host = headers.getHostValue();
   // rewrite
   bool rewrite = false;
-  if (absl::StartsWith(hostValue, KusciaCommon::InternalClusterHost)) {
+  if (absl::StartsWith(host, KusciaCommon::InternalClusterHost)) {
     auto kusciaHost = headers.get(KusciaCommon::HeaderKeyKusciaHost);
     if (!kusciaHost.empty()) {
       host = kusciaHost[0]->value().getStringView();
