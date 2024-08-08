@@ -45,12 +45,12 @@ endef
 build-envoy:
 	@$(call start_docker)
 	docker exec -it ${CONTAINER_NAME} make build-envoy-local
-	docker exec -it ${CONTAINER_NAME} strip -s /home/admin/dev/bazel-bin/envoy
 
 
 .PHONY: build-envoy-local
 build-envoy-local:
-	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false
+	bazel build -c ${COMPILE_MODE} ${TARGET} --verbose_failures ${BUILD_OPTS} --@envoy//source/extensions/wasm_runtime/v8:enabled=false --repository_cache=./bazel_repo_cache --remote_download_minimal
+	strip -s bazel-bin/envoy
 	mkdir -p output/linux/${ARCH}/bin
 	mkdir -p output/linux/${ARCH}/conf
 	cp bazel-bin/envoy output/linux/${ARCH}/bin
