@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - [Upgrade] Upgraded the dependent Envoy version to 1.29.4.
-- [Security Hardening] Switch end-to-end AES encryption to Galois/Counter Mode.
 
 ## [0.2.0b0] - 2023-7-6
 ### Added
