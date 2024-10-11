@@ -44,11 +44,20 @@ Http::FilterHeadersStatus HeaderDecoratorFilter::decodeHeaders(Http::RequestHead
 }
 
 void HeaderDecoratorFilter::appendHeaders(Http::RequestHeaderMap& headers) const {
-  auto source = KusciaHeader::getSource(headers).value_or("");
+  // get original source header
+  auto source_header = headers.get(KusciaCommon::HeaderKeyOriginSource);
+  if (source_header.empty()) {
+    source_header = headers.get(KusciaCommon::HeaderKeyKusciaSource);
+  }
+  std::string source;
+  if (!source_header.empty()) {
+    source = source_header[0]->value().getStringView();
+  }
+  // overwrite headers if exists
   auto iter = append_headers_.find(source);
   if (iter != append_headers_.end()) {
     for (const auto& entry : iter->second) {
-      headers.addCopy(Http::LowerCaseString(entry.first), entry.second);
+      headers.setCopy(Http::LowerCaseString(entry.first), entry.second);
     }
   }
 }
