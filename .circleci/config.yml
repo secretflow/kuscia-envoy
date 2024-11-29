@@ -8,26 +8,51 @@ version: 2.1
 executors:
   linux_x64_executor: # declares a reusable executor
     docker:
-      - image: envoyproxy/envoy-build-ubuntu:0ca52447572ee105a4730da5e76fe47c9c5a7c64
+      - image: envoyproxy/envoy-build-ubuntu:7304f974de2724617b7492ccb4c9c58cd420353a
     resource_class: 2xlarge
     shell: /bin/bash --login -eo pipefail
   linux_aarch64_executor:
     docker:
-      - image: envoyproxy/envoy-build-ubuntu:0ca52447572ee105a4730da5e76fe47c9c5a7c64
+      - image: envoyproxy/envoy-build-ubuntu:7304f974de2724617b7492ccb4c9c58cd420353a
     resource_class: arm.2xlarge
     shell: /bin/bash --login -eo pipefail
 
 commands:
+  go_env:
+    steps:
+      - run:
+          name: "install go"
+          command: |
+            ARCH=$(uname -m)
+
+            if [ "$ARCH" == "aarch64" ]; then
+            set +e
+            apt-get update  -y
+            apt-get install  g++-11 cmake nasm ninja-build -y
+            update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1100
+            update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 1100
+            set -e
+            fi
   build_envoy:
     steps:
       - run:
           name: "make build-envoy-local"
           command: |
-            git submodule update --init
             git config --global --add safe.directory ./
+            git submodule update --init
             make build-envoy-local
       - store_artifacts:
           path: output
+  envoy_test:
+    steps:
+      - run:
+          name: "make test-envoy-local"
+          command: |
+            ARCH=$(uname -m)
+            git config --global --add safe.directory ./
+            git submodule update --init
+            make test-envoy-local
+
 
 jobs:
   linux_build_envoy:
@@ -37,7 +62,17 @@ jobs:
     executor: <<parameters.executor>>
     steps:
       - checkout
+      - go_env
       - build_envoy
+  linux_envoy_test:
+    parameters:
+      executor:
+        type: string
+    executor: <<parameters.executor>>
+    steps:
+      - checkout
+      - go_env
+      - envoy_test
   docker_image_publish:
     docker:
       - image: cimg/deploy:2023.06.1
@@ -77,12 +112,35 @@ jobs:
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
+  unit-test:
+    jobs:
+      - linux_envoy_test:
+          matrix:
+            parameters:
+              executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
+          filters:
+            tags:
+              ignore: /.*/
   build-workflow:
     jobs:
+      - linux_envoy_test:
+          matrix:
+            parameters:
+              executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
       - linux_build_envoy:
           matrix:
             parameters:
               executor: [ "linux_x64_executor", "linux_aarch64_executor" ]
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
       - docker_image_publish:
           requires:
             - linux_build_envoy
